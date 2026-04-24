@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mac Local Image Editor</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="workspace">
+        <aside class="panel">
+          <h1>Mac Local Image Editor</h1>
+          <form id="edit-form">
+            <label>
+              Image
+              <input id="image" name="image" type="file" accept="image/*" required />
+            </label>
+            <label>
+              Edit prompt
+              <textarea
+                id="prompt"
+                name="prompt"
+                rows="5"
+                placeholder="Make the sky dramatic, keep the subject unchanged"
+                required
+              ></textarea>
+            </label>
+            <div class="controls">
+              <label>
+                Steps
+                <input name="steps" type="number" min="1" max="80" value="20" />
+              </label>
+              <label>
+                Guidance
+                <input name="guidance_scale" type="number" min="1" max="20" step="0.5" value="7.5" />
+              </label>
+              <label>
+                Image lock
+                <input
+                  name="image_guidance_scale"
+                  type="number"
+                  min="0.5"
+                  max="5"
+                  step="0.1"
+                  value="1.5"
+                />
+              </label>
+              <label>
+                Seed
+                <input name="seed" type="number" placeholder="random" />
+              </label>
+            </div>
+            <fieldset>
+              <legend>Video</legend>
+              <label class="checkbox">
+                <input name="edit_first" type="checkbox" />
+                Edit first
+              </label>
+              <div class="controls">
+                <label>
+                  Video steps
+                  <input name="video_steps" type="number" min="1" max="80" value="25" />
+                </label>
+                <label>
+                  Frames
+                  <input name="frames" type="number" min="2" max="25" value="14" />
+                </label>
+                <label>
+                  FPS
+                  <input name="fps" type="number" min="1" max="30" value="7" />
+                </label>
+                <label>
+                  Motion
+                  <input name="motion_bucket_id" type="number" min="1" max="255" value="127" />
+                </label>
+              </div>
+            </fieldset>
+            <div class="actions">
+              <button id="plan-button" type="button">Plan prompt</button>
+              <button id="edit-button" type="submit">Generate edit</button>
+              <button id="video-button" type="button">Generate video</button>
+            </div>
+          </form>
+          <div id="status" class="status">Checking local runtime...</div>
+          <pre id="planned" class="planned"></pre>
+        </aside>
+        <section class="preview-grid">
+          <figure>
+            <figcaption>Original</figcaption>
+            <img id="source-preview" alt="" />
+          </figure>
+          <figure>
+            <figcaption>Edited</figcaption>
+            <img id="result-preview" alt="" />
+          </figure>
+          <figure class="video-figure">
+            <figcaption>Video</figcaption>
+            <video id="video-preview" controls loop playsinline></video>
+          </figure>
+        </section>
+      </section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

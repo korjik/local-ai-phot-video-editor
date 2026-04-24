@@ -1,0 +1,1 @@
+"""Local image-editing service."""

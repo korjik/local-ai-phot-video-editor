@@ -1,0 +1,53 @@
+services:
+  web:
+    build:
+      context: .
+    image: mac-local-image-editor:latest
+    init: true
+    ports:
+      - "8000:8000"
+    environment:
+      EDIT_MODEL_ID: ${EDIT_MODEL_ID:-timbrooks/instruct-pix2pix}
+      VIDEO_MODEL_ID: ${VIDEO_MODEL_ID:-stabilityai/stable-video-diffusion-img2vid-xt}
+      PROMPT_PLANNER: ${PROMPT_PLANNER:-rules}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1}
+      MAX_IMAGE_SIDE: ${MAX_IMAGE_SIDE:-512}
+      HF_HOME: /cache/huggingface
+      TORCH_HOME: /cache/torch
+    volumes:
+      - hf-cache:/cache/huggingface
+      - torch-cache:/cache/torch
+      - ./outputs:/app/outputs
+      - ./inputs:/app/inputs:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  cli:
+    image: mac-local-image-editor:latest
+    build:
+      context: .
+    profiles:
+      - cli
+    init: true
+    entrypoint: ["mac-image-edit"]
+    environment:
+      EDIT_MODEL_ID: ${EDIT_MODEL_ID:-timbrooks/instruct-pix2pix}
+      VIDEO_MODEL_ID: ${VIDEO_MODEL_ID:-stabilityai/stable-video-diffusion-img2vid-xt}
+      PROMPT_PLANNER: ${PROMPT_PLANNER:-rules}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1}
+      MAX_IMAGE_SIDE: ${MAX_IMAGE_SIDE:-512}
+      HF_HOME: /cache/huggingface
+      TORCH_HOME: /cache/torch
+    volumes:
+      - hf-cache:/cache/huggingface
+      - torch-cache:/cache/torch
+      - ./outputs:/app/outputs
+      - ./inputs:/app/inputs:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  hf-cache:
+  torch-cache:

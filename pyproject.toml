@@ -1,0 +1,35 @@
+[project]
+name = "mac-local-image-editor"
+version = "0.1.0"
+description = "Local Apple Silicon GPU image-to-image generative editing service."
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "accelerate>=0.31",
+    "diffusers>=0.29",
+    "fastapi>=0.111",
+    "httpx>=0.27",
+    "imageio[ffmpeg]>=2.34",
+    "pillow>=10.3",
+    "pillow-heif>=0.16",
+    "python-multipart>=0.0.9",
+    "safetensors>=0.4",
+    "torch>=2.3,<2.6",
+    "transformers>=4.41",
+    "uvicorn[standard]>=0.30",
+]
+
+[project.scripts]
+mac-image-edit = "app.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "ruff>=0.5",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
