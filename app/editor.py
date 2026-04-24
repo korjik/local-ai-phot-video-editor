@@ -4,16 +4,21 @@ import gc
 from threading import Lock
 
 import torch
-from diffusers import StableDiffusionInstructPix2PixPipeline
+from diffusers import (
+    StableDiffusionInstructPix2PixPipeline,
+    StableDiffusionXLInstructPix2PixPipeline,
+)
 from PIL import Image
 
 from app.config import Settings
+
+EditPipeline = StableDiffusionInstructPix2PixPipeline | StableDiffusionXLInstructPix2PixPipeline
 
 
 class ImageEditor:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
-        self._pipeline: StableDiffusionInstructPix2PixPipeline | None = None
+        self._pipeline: EditPipeline | None = None
         self._lock = Lock()
 
     @property
@@ -29,12 +34,24 @@ class ImageEditor:
             return torch.float16
         return torch.float32
 
-    def _load_pipeline(self) -> StableDiffusionInstructPix2PixPipeline:
+    @property
+    def is_sdxl_edit_model(self) -> bool:
+        return "sdxl" in self.settings.edit_model_id.lower()
+
+    def _load_pipeline(self) -> EditPipeline:
         if self._pipeline is None:
-            pipeline = StableDiffusionInstructPix2PixPipeline.from_pretrained(
+            pipeline_class = (
+                StableDiffusionXLInstructPix2PixPipeline
+                if self.is_sdxl_edit_model
+                else StableDiffusionInstructPix2PixPipeline
+            )
+            pipeline_kwargs = {"torch_dtype": self._dtype()}
+            if not self.is_sdxl_edit_model:
+                pipeline_kwargs["safety_checker"] = None
+
+            pipeline = pipeline_class.from_pretrained(
                 self.settings.edit_model_id,
-                torch_dtype=self._dtype(),
-                safety_checker=None,
+                **pipeline_kwargs,
             )
             pipeline = pipeline.to(self.device)
             pipeline.enable_attention_slicing()
@@ -46,7 +63,7 @@ class ImageEditor:
         image: Image.Image,
         prompt: str,
         steps: int = 20,
-        guidance_scale: float = 7.5,
+        guidance_scale: float = 3.0,
         image_guidance_scale: float = 1.5,
         seed: int | None = None,
     ) -> Image.Image:
@@ -56,6 +73,11 @@ class ImageEditor:
 
         with self._lock:
             pipeline = self._load_pipeline()
+            pipeline_kwargs = {}
+            if self.is_sdxl_edit_model:
+                pipeline_kwargs["height"] = image.height
+                pipeline_kwargs["width"] = image.width
+
             with torch.inference_mode():
                 result = pipeline(
                     prompt=prompt,
@@ -64,6 +86,7 @@ class ImageEditor:
                     guidance_scale=guidance_scale,
                     image_guidance_scale=image_guidance_scale,
                     generator=generator,
+                    **pipeline_kwargs,
                 ).images[0]
 
             if self.device == "mps":

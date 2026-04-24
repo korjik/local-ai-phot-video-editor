@@ -30,7 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
     edit.add_argument("prompt", help="Plain-language image edit request.")
     edit.add_argument("-o", "--output", type=Path, default=Path("edited.png"), help="Output PNG path.")
     edit.add_argument("--steps", type=positive_int, default=20, help="Diffusion steps.")
-    edit.add_argument("--guidance-scale", type=float, default=7.5, help="Text prompt guidance.")
+    edit.add_argument("--guidance-scale", type=float, default=3.0, help="Text prompt guidance.")
     edit.add_argument(
         "--image-guidance-scale",
         type=float,

@@ -7,6 +7,77 @@ from app.config import Settings
 
 _SPACE_RE = re.compile(r"\s+")
 
+_FACE_TERMS = (
+    "face",
+    "faces",
+    "facial",
+    "head",
+    "hair",
+    "eye",
+    "eyes",
+    "eyebrow",
+    "eyebrows",
+    "eyelash",
+    "eyelashes",
+    "nose",
+    "mouth",
+    "lip",
+    "lips",
+    "teeth",
+    "smile",
+    "jaw",
+    "chin",
+    "cheek",
+    "cheeks",
+    "forehead",
+    "ear",
+    "ears",
+    "beard",
+    "mustache",
+)
+
+_BODY_TERMS = (
+    "body",
+    "bodies",
+    "person",
+    "people",
+    "human",
+    "pose",
+    "posture",
+    "torso",
+    "shoulder",
+    "shoulders",
+    "arm",
+    "arms",
+    "elbow",
+    "elbows",
+    "wrist",
+    "wrists",
+    "hand",
+    "hands",
+    "finger",
+    "fingers",
+    "thumb",
+    "thumbs",
+    "leg",
+    "legs",
+    "knee",
+    "knees",
+    "ankle",
+    "ankles",
+    "foot",
+    "feet",
+    "skin",
+    "neck",
+    "waist",
+    "hip",
+    "hips",
+)
+
+
+def _contains_term(prompt: str, terms: tuple[str, ...]) -> bool:
+    return any(re.search(rf"\b{re.escape(term)}\b", prompt) for term in terms)
+
 
 def clean_prompt(prompt: str) -> str:
     cleaned = _SPACE_RE.sub(" ", prompt.strip())
@@ -21,11 +92,26 @@ def rules_plan(prompt: str) -> str:
 
     preservation = "Preserve the original composition, identity, geometry, and important details."
     quality = "Make the edit natural, coherent, and photorealistic unless the user asks otherwise."
+    anatomy = ""
 
     if any(word in lower for word in ("cartoon", "anime", "painting", "sketch", "illustration")):
         quality = "Apply the requested visual style consistently while preserving the main subject."
 
-    return f"{cleaned}. {preservation} {quality}"
+    mentions_face = _contains_term(lower, _FACE_TERMS)
+    mentions_body = _contains_term(lower, _BODY_TERMS)
+    if mentions_face or mentions_body:
+        anatomy_parts = [
+            "Recognize people, faces, and body parts as structured anatomy.",
+            "Apply the requested change only to the named face or body part.",
+            "Keep untargeted facial features, limbs, hands, skin texture, pose, proportions, and clothing unchanged.",
+        ]
+        if mentions_face:
+            anatomy_parts.append("Preserve the person's identity, expression, gaze, and facial symmetry.")
+        if mentions_body:
+            anatomy_parts.append("Preserve natural joints, fingers, limb count, posture, and body proportions.")
+        anatomy = " " + " ".join(anatomy_parts)
+
+    return f"{cleaned}. {preservation} {quality}{anatomy}"
 
 
 async def ollama_plan(prompt: str, settings: Settings) -> str:
@@ -35,6 +121,8 @@ async def ollama_plan(prompt: str, settings: Settings) -> str:
     instruction = (
         "Rewrite this image-editing request into one concise instruction for an image-to-image "
         "diffusion editor. Preserve user intent. Include what should stay unchanged. "
+        "When the request mentions a face or body part, name that part explicitly and preserve "
+        "identity, pose, proportions, skin texture, hands, limbs, and untargeted anatomy. "
         "Do not add unrelated objects or explanations.\n\n"
         f"User request: {cleaned}"
     )

@@ -11,7 +11,8 @@ Browser UI
       -> rule-based cleanup
       -> optional Ollama expansion
   -> Diffusers image editor
-      -> StableDiffusionInstructPix2PixPipeline
+      -> StableDiffusionXLInstructPix2PixPipeline by default
+      -> StableDiffusionInstructPix2PixPipeline for legacy SD 1.x models
       -> torch device: mps on Apple Silicon, cpu fallback otherwise
   -> Diffusers video generator
       -> StableVideoDiffusionPipeline
@@ -19,7 +20,8 @@ Browser UI
   -> edited PNG response
 ```
 
-The default model is `timbrooks/instruct-pix2pix`, which is practical for prompt-guided edits on local Apple Silicon. First run downloads model weights from Hugging Face.
+The default model is `diffusers/sdxl-instructpix2pix-768`, which gives higher-quality prompt-guided edits than the older SD 1.x InstructPix2Pix model and generally handles people, faces, and body detail better. First run downloads model weights from Hugging Face.
+For a smaller legacy model, set `EDIT_MODEL_ID=timbrooks/instruct-pix2pix`.
 The default video model is `stabilityai/stable-video-diffusion-img2vid-xt`.
 
 ## Setup
@@ -47,7 +49,7 @@ Generate an edit:
 mac-image-edit edit input.jpg "make the sky dramatic but keep the buildings unchanged" \
   --output outputs/edited.png \
   --steps 20 \
-  --guidance-scale 7.5 \
+  --guidance-scale 3.0 \
   --image-guidance-scale 1.5 \
   --show-planned-prompt
 ```
@@ -138,6 +140,7 @@ export OLLAMA_MODEL=llama3.1
 ```
 
 Without Ollama, the app uses a deterministic local planner that rewrites short user requests into editing-focused instructions.
+The rule-based planner also adds anatomy-aware guidance when prompts mention faces or body parts, helping the image model localize edits while preserving identity, pose, proportions, hands, limbs, skin texture, and untargeted features.
 
 In Docker Compose, Ollama running on the Mac host is available at `http://host.docker.internal:11434`, which is the default Compose `OLLAMA_BASE_URL`.
 
@@ -146,7 +149,7 @@ In Docker Compose, Ollama running on the Mac host is available at `http://host.d
 Environment variables:
 
 ```bash
-EDIT_MODEL_ID=timbrooks/instruct-pix2pix
+EDIT_MODEL_ID=diffusers/sdxl-instructpix2pix-768
 VIDEO_MODEL_ID=stabilityai/stable-video-diffusion-img2vid-xt
 PROMPT_PLANNER=rules
 OLLAMA_BASE_URL=http://127.0.0.1:11434
@@ -155,6 +158,7 @@ MAX_IMAGE_SIDE=768
 ```
 
 For smaller Macs, reduce `MAX_IMAGE_SIDE` to `512`. Larger images need more unified memory.
+The app automatically uses the SDXL InstructPix2Pix pipeline when `EDIT_MODEL_ID` contains `sdxl`; otherwise it falls back to the legacy Stable Diffusion InstructPix2Pix pipeline.
 
 ## API
 
@@ -163,7 +167,7 @@ curl -X POST http://127.0.0.1:8000/api/edit \
   -F "image=@input.jpg" \
   -F "prompt=make the sky dramatic but keep the buildings unchanged" \
   -F "steps=20" \
-  -F "guidance_scale=7.5" \
+  -F "guidance_scale=3.0" \
   --output edited.png
 ```
 

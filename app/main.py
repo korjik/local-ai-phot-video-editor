@@ -52,7 +52,7 @@ async def edit_image(
     image: UploadFile = File(...),
     prompt: str = Form(...),
     steps: int = Form(20),
-    guidance_scale: float = Form(7.5),
+    guidance_scale: float = Form(3.0),
     image_guidance_scale: float = Form(1.5),
     seed: int | None = Form(None),
 ) -> Response:
