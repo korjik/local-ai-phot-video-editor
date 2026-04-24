@@ -6,7 +6,13 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from PIL import Image, ImageFilter
-from transformers import AutoModelForSemanticSegmentation, SegformerImageProcessor
+from transformers import AutoModelForSemanticSegmentation
+
+# SegFormer / ImageNet preprocessing constants — hardcoded so we don't need
+# torchvision (which SegformerImageProcessor pulls in transitively).
+_SEGFORMER_INPUT_SIZE = 512
+_IMAGENET_MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+_IMAGENET_STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
 # ATR dataset label IDs used by mattmdjaga/segformer_b2_clothes
 _LABEL_BACKGROUND = 0
@@ -90,7 +96,6 @@ class HumanSegmenter:
     MODEL_ID = "mattmdjaga/segformer_b2_clothes"
 
     def __init__(self) -> None:
-        self._processor: SegformerImageProcessor | None = None
         self._model: AutoModelForSemanticSegmentation | None = None
         self._lock = Lock()
 
@@ -102,22 +107,31 @@ class HumanSegmenter:
             return "cuda"
         return "cpu"
 
-    def _load(self) -> tuple[SegformerImageProcessor, AutoModelForSemanticSegmentation]:
-        if self._processor is None:
-            self._processor = SegformerImageProcessor.from_pretrained(self.MODEL_ID)
+    def _load(self) -> AutoModelForSemanticSegmentation:
+        if self._model is None:
             model = AutoModelForSemanticSegmentation.from_pretrained(self.MODEL_ID)
             self._model = model.to(self.device).eval()
-        assert self._processor is not None and self._model is not None
-        return self._processor, self._model
+        assert self._model is not None
+        return self._model
+
+    def _preprocess(self, image: Image.Image) -> torch.Tensor:
+        """Resize to the model input size and apply ImageNet normalization."""
+        resized = image.convert("RGB").resize(
+            (_SEGFORMER_INPUT_SIZE, _SEGFORMER_INPUT_SIZE),
+            Image.Resampling.BILINEAR,
+        )
+        arr = np.asarray(resized, dtype=np.float32) / 255.0  # (H, W, 3)
+        arr = (arr - _IMAGENET_MEAN) / _IMAGENET_STD
+        tensor = torch.from_numpy(arr).permute(2, 0, 1).unsqueeze(0)  # (1, 3, H, W)
+        return tensor.to(self.device)
 
     def _segment_labels(self, image: Image.Image) -> np.ndarray:
         """Return an (H, W) uint8 array of label IDs at full image resolution."""
-        processor, model = self._load()
-        inputs = processor(images=image, return_tensors="pt")
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
+        model = self._load()
+        pixel_values = self._preprocess(image)
 
         with torch.inference_mode():
-            logits = model(**inputs).logits  # (1, num_classes, H/4, W/4)
+            logits = model(pixel_values=pixel_values).logits  # (1, num_classes, H/4, W/4)
 
         # Upsample to original image size
         upsampled = F.interpolate(
