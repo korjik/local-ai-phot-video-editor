@@ -36,6 +36,83 @@ _FACE_TERMS = (
     "mustache",
 )
 
+_CLOTHING_TERMS = (
+    "shirt",
+    "t-shirt",
+    "tshirt",
+    "blouse",
+    "top",
+    "jacket",
+    "coat",
+    "blazer",
+    "sweater",
+    "sweatshirt",
+    "hoodie",
+    "cardigan",
+    "vest",
+    "pants",
+    "jeans",
+    "trousers",
+    "leggings",
+    "shorts",
+    "skirt",
+    "dress",
+    "gown",
+    "suit",
+    "uniform",
+    "outfit",
+    "clothes",
+    "clothing",
+    "wear",
+    "wearing",
+    "fabric",
+    "sleeve",
+    "collar",
+    "undershirt",
+    "tank",
+    "crop",
+    "turtleneck",
+    "scarf",
+    "hat",
+    "cap",
+    "boot",
+    "boots",
+    "sneakers",
+    "shoes",
+    "shoe",
+    # lingerie / underwear / swimwear
+    "bra",
+    "bralette",
+    "panties",
+    "panty",
+    "underwear",
+    "lingerie",
+    "bikini",
+    "thong",
+    "briefs",
+    "camisole",
+    "bodysuit",
+    "swimsuit",
+    "swimwear",
+    "corset",
+    "nightgown",
+    "negligee",
+)
+
+# Terms indicating upper-body garments
+_UPPER_CLOTHING_TERMS = (
+    "shirt", "t-shirt", "tshirt", "blouse", "top", "jacket", "coat", "blazer",
+    "sweater", "sweatshirt", "hoodie", "cardigan", "vest", "undershirt", "tank",
+    "crop", "turtleneck", "bra", "bralette", "camisole", "bodysuit", "corset",
+    "negligee", "nightgown",
+)
+
+# Terms indicating lower-body garments
+_LOWER_CLOTHING_TERMS = (
+    "pants", "jeans", "trousers", "leggings", "shorts", "skirt", "thong",
+    "panties", "panty", "underwear", "briefs", "swimsuit", "swimwear",
+)
+
 _BODY_TERMS = (
     "body",
     "bodies",
@@ -98,19 +175,37 @@ def rules_plan(prompt: str) -> str:
     is_style = any(word in lower for word in ("cartoon", "anime", "painting", "sketch", "illustration"))
     mentions_face = _contains_term(lower, _FACE_TERMS)
     mentions_body = _contains_term(lower, _BODY_TERMS)
+    mentions_cloth = _contains_term(lower, _CLOTHING_TERMS)
 
     if is_style:
         suffix = ", apply style consistently, preserve subject"
-    elif mentions_face and mentions_body:
+    elif mentions_face and (mentions_body or mentions_cloth):
         suffix = ", preserve identity, other facial features, body proportions, and pose"
     elif mentions_face:
         suffix = ", preserve identity, expression, and all other facial features"
+    elif mentions_cloth:
+        suffix = ", preserve face, skin, hair, pose, and body proportions"
     elif mentions_body:
         suffix = ", preserve body proportions, pose, and natural anatomy"
     else:
         suffix = ", preserve composition, subject, and details"
 
     return f"{cleaned}{suffix}"
+
+
+def mentions_clothing(prompt: str) -> bool:
+    """Return True if the prompt refers to clothing items or actions."""
+    return _contains_term(prompt.lower(), _CLOTHING_TERMS)
+
+
+def mentions_full_outfit_swap(prompt: str) -> bool:
+    """Return True if the prompt mentions both upper- and lower-body garments.
+
+    Used to detect requests like 'blazer and pants → bra and panties' so the
+    edit pipeline can apply more aggressive parameters and gap-filling masks.
+    """
+    lower = prompt.lower()
+    return _contains_term(lower, _UPPER_CLOTHING_TERMS) and _contains_term(lower, _LOWER_CLOTHING_TERMS)
 
 
 async def ollama_plan(prompt: str, settings: Settings) -> str:

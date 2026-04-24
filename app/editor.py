@@ -8,7 +8,7 @@ from diffusers import (
     StableDiffusionInstructPix2PixPipeline,
     StableDiffusionXLInstructPix2PixPipeline,
 )
-from PIL import Image
+from PIL import Image, ImageFilter
 
 from app.config import Settings
 
@@ -100,3 +100,41 @@ class ImageEditor:
                 torch.mps.empty_cache()
             gc.collect()
             return result
+
+    def edit_masked(
+        self,
+        image: Image.Image,
+        mask: Image.Image,
+        prompt: str,
+        steps: int = 20,
+        guidance_scale: float = 7.5,
+        image_guidance_scale: float = 1.2,
+        seed: int | None = None,
+        negative_prompt: str = _DEFAULT_NEGATIVE,
+    ) -> Image.Image:
+        """Run InstructPix2Pix then composite only the masked region onto the original.
+
+        Pixels outside the mask are taken directly from the original image, so
+        the face, background, and unmasked body parts are preserved exactly.
+        guidance_scale is higher here (default 7.5) so the model actually follows
+        the clothing-change instruction instead of staying close to the original.
+        """
+        edited = self.edit(
+            image=image,
+            prompt=prompt,
+            steps=steps,
+            guidance_scale=guidance_scale,
+            image_guidance_scale=image_guidance_scale,
+            seed=seed,
+            negative_prompt=negative_prompt,
+        )
+
+        if edited.size != image.size:
+            edited = edited.resize(image.size, Image.Resampling.LANCZOS)
+
+        # Feather mask edges to avoid hard seams at clothing boundaries
+        feathered = mask.filter(ImageFilter.GaussianBlur(radius=4))
+
+        result = image.copy()
+        result.paste(edited, mask=feathered)
+        return result

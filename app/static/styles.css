@@ -134,6 +134,48 @@ button:disabled {
   opacity: 0.65;
 }
 
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #d8d4ca;
+  padding-bottom: 0;
+}
+
+.tab {
+  background: transparent;
+  color: #394352;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 7px 14px;
+  border-radius: 6px 6px 0 0;
+  border: 1px solid transparent;
+  border-bottom: none;
+  cursor: pointer;
+}
+
+.tab--active {
+  background: #fff;
+  color: #15202f;
+  border-color: #d8d4ca;
+  margin-bottom: -1px;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel--active {
+  display: grid;
+  gap: 14px;
+}
+
+.hint {
+  font-weight: 400;
+  color: #7a8696;
+  font-size: 0.82rem;
+}
+
 .status {
   margin-top: 16px;
   min-height: 22px;

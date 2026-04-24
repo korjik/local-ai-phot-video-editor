@@ -11,7 +11,13 @@
       <section class="workspace">
         <aside class="panel">
           <h1>Mac Local Image Editor</h1>
-          <form id="edit-form">
+          <nav class="tabs" role="tablist">
+            <button class="tab tab--active" data-tab="edit" role="tab" type="button">Edit</button>
+            <button class="tab" data-tab="tryon" role="tab" type="button">Try On</button>
+          </nav>
+
+          <!-- ── Edit tab ── -->
+          <form id="edit-form" class="tab-panel tab-panel--active" data-panel="edit">
             <label>
               Image
               <input id="image" name="image" type="file" accept="image/*" required />
@@ -78,20 +84,63 @@
             </fieldset>
             <div class="actions">
               <button id="plan-button" type="button">Plan prompt</button>
+              <button id="segment-button" type="button">Detect person</button>
               <button id="edit-button" type="submit">Generate edit</button>
               <button id="video-button" type="button">Generate video</button>
             </div>
           </form>
+          <!-- ── Try On tab ── -->
+          <form id="tryon-form" class="tab-panel" data-panel="tryon">
+            <label>
+              Person photo
+              <input id="tryon-person" name="person_image" type="file" accept="image/*" required />
+            </label>
+            <label>
+              Garment photo <span class="hint">(product image from collection)</span>
+              <input id="tryon-garment" name="garment_image" type="file" accept="image/*" required />
+            </label>
+            <label>
+              Garment description <span class="hint">(optional — improves accuracy)</span>
+              <textarea
+                id="tryon-prompt"
+                name="prompt"
+                rows="3"
+                placeholder="black lace bra and matching panties"
+              ></textarea>
+            </label>
+            <div class="controls">
+              <label>
+                Steps
+                <input name="steps" type="number" min="1" max="80" value="30" />
+              </label>
+              <label>
+                Guidance
+                <input name="guidance_scale" type="number" min="1" max="10" step="0.5" value="2.0" />
+              </label>
+              <label>
+                Seed
+                <input name="seed" type="number" placeholder="random" />
+              </label>
+            </div>
+            <div class="actions">
+              <button id="tryon-button" type="submit">Try On</button>
+            </div>
+          </form>
+
           <div id="status" class="status">Checking local runtime...</div>
           <pre id="planned" class="planned"></pre>
         </aside>
         <section class="preview-grid">
           <figure>
-            <figcaption>Original</figcaption>
+            <figcaption>Person / Original</figcaption>
             <img id="source-preview" alt="" />
           </figure>
           <figure>
-            <figcaption>Edited</figcaption>
+            <figcaption>Garment / Clothing mask</figcaption>
+            <img id="mask-preview" alt="" />
+          </figure>
+          <figure>
+            <figcaption>Result</figcaption>
             <img id="result-preview" alt="" />
           </figure>
           <figure class="video-figure">
