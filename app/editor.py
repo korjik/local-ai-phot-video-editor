@@ -58,6 +58,12 @@ class ImageEditor:
             self._pipeline = pipeline
         return self._pipeline
 
+    # Negative prompt steers the model away from common face and anatomy artifacts.
+    _DEFAULT_NEGATIVE = (
+        "blurry, deformed, distorted face, asymmetric face, bad eyes, bad teeth, "
+        "extra limbs, missing limbs, bad hands, fused fingers, bad anatomy, low quality, duplicate"
+    )
+
     def edit(
         self,
         image: Image.Image,
@@ -66,6 +72,7 @@ class ImageEditor:
         guidance_scale: float = 3.0,
         image_guidance_scale: float = 1.5,
         seed: int | None = None,
+        negative_prompt: str = _DEFAULT_NEGATIVE,
     ) -> Image.Image:
         generator = None
         if seed is not None:
@@ -73,7 +80,7 @@ class ImageEditor:
 
         with self._lock:
             pipeline = self._load_pipeline()
-            pipeline_kwargs = {}
+            pipeline_kwargs: dict[str, object] = {"negative_prompt": negative_prompt}
             if self.is_sdxl_edit_model:
                 pipeline_kwargs["height"] = image.height
                 pipeline_kwargs["width"] = image.width

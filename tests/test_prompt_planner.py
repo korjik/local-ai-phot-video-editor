@@ -11,21 +11,26 @@ def test_clean_prompt_rejects_empty_prompt() -> None:
 def test_rules_plan_preserves_intent_and_adds_constraints() -> None:
     planned = rules_plan(" make the jacket red  ")
 
-    assert planned.startswith("make the jacket red.")
-    assert "Preserve the original composition" in planned
-    assert "photorealistic" in planned
+    assert planned.startswith("make the jacket red")
+    assert "preserve composition" in planned
+    # Must fit within CLIP's 77-token budget (~500 chars is a safe upper bound)
+    assert len(planned) < 500
 
 
 def test_rules_plan_adds_face_recognition_constraints() -> None:
     planned = rules_plan("brighten the eyes and smooth the face")
 
-    assert "Recognize people, faces, and body parts as structured anatomy" in planned
-    assert "Apply the requested change only to the named face or body part" in planned
-    assert "Preserve the person's identity, expression, gaze, and facial symmetry" in planned
+    assert "brighten the eyes and smooth the face" in planned
+    assert "preserve identity" in planned
+    assert "facial features" in planned
+    # Compact enough that CLIP won't truncate the face guidance
+    assert len(planned) < 200
 
 
 def test_rules_plan_adds_body_part_constraints() -> None:
     planned = rules_plan("make the left hand sharper")
 
-    assert "limbs, hands, skin texture, pose, proportions, and clothing unchanged" in planned
-    assert "Preserve natural joints, fingers, limb count, posture, and body proportions" in planned
+    assert "make the left hand sharper" in planned
+    assert "proportions" in planned
+    assert "anatomy" in planned
+    assert len(planned) < 200

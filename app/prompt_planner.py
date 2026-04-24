@@ -87,31 +87,30 @@ def clean_prompt(prompt: str) -> str:
 
 
 def rules_plan(prompt: str) -> str:
+    """Build a compact prompt that fits within CLIP's 77-token limit.
+
+    The user instruction comes first (highest priority). A short preservation
+    suffix follows so the anatomy/composition hints are never truncated.
+    """
     cleaned = clean_prompt(prompt)
     lower = cleaned.lower()
 
-    preservation = "Preserve the original composition, identity, geometry, and important details."
-    quality = "Make the edit natural, coherent, and photorealistic unless the user asks otherwise."
-    anatomy = ""
-
-    if any(word in lower for word in ("cartoon", "anime", "painting", "sketch", "illustration")):
-        quality = "Apply the requested visual style consistently while preserving the main subject."
-
+    is_style = any(word in lower for word in ("cartoon", "anime", "painting", "sketch", "illustration"))
     mentions_face = _contains_term(lower, _FACE_TERMS)
     mentions_body = _contains_term(lower, _BODY_TERMS)
-    if mentions_face or mentions_body:
-        anatomy_parts = [
-            "Recognize people, faces, and body parts as structured anatomy.",
-            "Apply the requested change only to the named face or body part.",
-            "Keep untargeted facial features, limbs, hands, skin texture, pose, proportions, and clothing unchanged.",
-        ]
-        if mentions_face:
-            anatomy_parts.append("Preserve the person's identity, expression, gaze, and facial symmetry.")
-        if mentions_body:
-            anatomy_parts.append("Preserve natural joints, fingers, limb count, posture, and body proportions.")
-        anatomy = " " + " ".join(anatomy_parts)
 
-    return f"{cleaned}. {preservation} {quality}{anatomy}"
+    if is_style:
+        suffix = ", apply style consistently, preserve subject"
+    elif mentions_face and mentions_body:
+        suffix = ", preserve identity, other facial features, body proportions, and pose"
+    elif mentions_face:
+        suffix = ", preserve identity, expression, and all other facial features"
+    elif mentions_body:
+        suffix = ", preserve body proportions, pose, and natural anatomy"
+    else:
+        suffix = ", preserve composition, subject, and details"
+
+    return f"{cleaned}{suffix}"
 
 
 async def ollama_plan(prompt: str, settings: Settings) -> str:
@@ -119,11 +118,9 @@ async def ollama_plan(prompt: str, settings: Settings) -> str:
 
     cleaned = clean_prompt(prompt)
     instruction = (
-        "Rewrite this image-editing request into one concise instruction for an image-to-image "
-        "diffusion editor. Preserve user intent. Include what should stay unchanged. "
-        "When the request mentions a face or body part, name that part explicitly and preserve "
-        "identity, pose, proportions, skin texture, hands, limbs, and untargeted anatomy. "
-        "Do not add unrelated objects or explanations.\n\n"
+        "Rewrite this image-editing request into one SHORT instruction (under 15 words) for an "
+        "image-to-image diffusion editor. State what to change. If a face or body part is mentioned, "
+        "name it. Do not add explanations or preservation hints — those are added separately.\n\n"
         f"User request: {cleaned}"
     )
     async with httpx.AsyncClient(timeout=30) as client:
