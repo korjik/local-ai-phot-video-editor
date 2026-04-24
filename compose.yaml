@@ -20,6 +20,7 @@ services:
       - torch-cache:/cache/torch
       - ./outputs:/app/outputs
       - ./inputs:/app/inputs:ro
+      - ./app:/app/app  # live-reload: host source overrides the built copy
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -45,6 +46,7 @@ services:
       - torch-cache:/cache/torch
       - ./outputs:/app/outputs
       - ./inputs:/app/inputs:ro
+      - ./app:/app/app
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
